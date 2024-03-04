@@ -108,6 +108,10 @@ Some microbes, e.g. EBV, can be subtyped if coverage is sufficient.
 
 ## Other Tools
 
+**[virus-interpreter](https://github.com/hartwigmedical/hmftools/tree/master/virus-interpreter)**
+
+The best option for detecting viruses from tumour bams particularly if you're running the hmftools pipeline
+
 **[viralrecon](https://nf-co.re/viralrecon/2.6.0)**
 
 Great if you have just 1 virus of interest and want to know if its in your fastqs. Nextflow pipeline.
