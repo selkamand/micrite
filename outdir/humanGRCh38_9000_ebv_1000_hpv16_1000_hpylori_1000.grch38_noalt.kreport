@@ -1,0 +1,81 @@
+ 43.30	2568	2568	U	0	unclassified
+ 56.70	3363	24	R	1	root
+ 36.39	2158	0	D	10239	  Viruses
+ 19.59	1162	0	D1	2731341	    Duplodnaviria
+ 19.59	1162	0	K	2731360	      Heunggongvirae
+ 19.59	1162	0	P	2731361	        Peploviricota
+ 19.59	1162	0	C	2731363	          Herviviricetes
+ 19.59	1162	0	O	548681	            Herpesvirales
+ 19.59	1162	0	F	3044472	              Orthoherpesviridae
+ 19.59	1162	0	F1	10374	                Gammaherpesvirinae
+ 19.59	1162	34	G	10375	                  Lymphocryptovirus
+ 19.02	1128	0	S	3050299	                    Lymphocryptovirus humangamma4
+ 19.02	1128	1126	S1	10376	                      human gammaherpesvirus 4
+  0.03	2	2	S2	12509	                        Human herpesvirus 4 type 2
+ 16.79	996	0	D1	2731342	    Monodnaviria
+ 16.79	996	0	K	2732092	      Shotokuvirae
+ 16.79	996	0	P	2732415	        Cossaviricota
+ 16.79	996	0	C	2732421	          Papovaviricetes
+ 16.79	996	0	O	2732533	            Zurhausenvirales
+ 16.79	996	0	F	151340	              Papillomaviridae
+ 16.79	996	0	F1	2169595	                Firstpapillomavirinae
+ 16.79	996	0	G	333750	                  Alphapapillomavirus
+ 16.79	996	0	S	337041	                    Alphapapillomavirus 9
+ 16.79	996	996	S1	333760	                      Human papillomavirus 16
+ 19.91	1181	2	R1	131567	  cellular organisms
+ 19.86	1178	2	D	2	    Bacteria
+ 19.79	1174	0	P	29547	      Campylobacterota
+ 19.79	1174	0	C	3031852	        Epsilonproteobacteria
+ 19.79	1174	0	O	213849	          Campylobacterales
+ 19.79	1174	0	F	72293	            Helicobacteraceae
+ 19.79	1174	51	G	209	              Helicobacter
+ 18.93	1123	1120	S	210	                Helicobacter pylori
+  0.02	1	1	S1	1382921	                  Helicobacter pylori oki112
+  0.02	1	1	S1	1321939	                  Helicobacter pylori UM037
+  0.02	1	1	S1	907238	                  Helicobacter pylori India7
+  0.02	1	0	P	1224	      Pseudomonadota
+  0.02	1	0	C	28211	        Alphaproteobacteria
+  0.02	1	0	O	204441	          Rhodospirillales
+  0.02	1	0	F	433	            Acetobacteraceae
+  0.02	1	0	G	504465	              Rhodovastum
+  0.02	1	1	S	504468	                Rhodovastum atsumiense
+  0.02	1	0	D1	1783270	      FCB group
+  0.02	1	0	D2	68336	        Bacteroidota/Chlorobiota group
+  0.02	1	0	P	976	          Bacteroidota
+  0.02	1	0	C	200643	            Bacteroidia
+  0.02	1	0	O	171549	              Bacteroidales
+  0.02	1	0	F	171552	                Prevotellaceae
+  0.02	1	0	G	838	                  Prevotella
+  0.02	1	0	G1	2638335	                    unclassified Prevotella
+  0.02	1	0	S	652716	                      Prevotella sp. oral taxon 299
+  0.02	1	1	S1	575614	                        Prevotella sp. oral taxon 299 str. F0039
+  0.02	1	0	D	2759	    Eukaryota
+  0.02	1	0	D1	33154	      Opisthokonta
+  0.02	1	0	K	33208	        Metazoa
+  0.02	1	0	K1	6072	          Eumetazoa
+  0.02	1	0	K2	33213	            Bilateria
+  0.02	1	0	K3	33511	              Deuterostomia
+  0.02	1	0	P	7711	                Chordata
+  0.02	1	0	P1	89593	                  Craniata
+  0.02	1	0	P2	7742	                    Vertebrata
+  0.02	1	0	P3	7776	                      Gnathostomata
+  0.02	1	0	P4	117570	                        Teleostomi
+  0.02	1	0	P5	117571	                          Euteleostomi
+  0.02	1	0	P6	8287	                            Sarcopterygii
+  0.02	1	0	P7	1338369	                              Dipnotetrapodomorpha
+  0.02	1	0	P8	32523	                                Tetrapoda
+  0.02	1	0	P9	32524	                                  Amniota
+  0.02	1	0	C	40674	                                    Mammalia
+  0.02	1	0	C1	32525	                                      Theria
+  0.02	1	0	C2	9347	                                        Eutheria
+  0.02	1	0	C3	1437010	                                          Boreoeutheria
+  0.02	1	0	C4	314146	                                            Euarchontoglires
+  0.02	1	0	O	9443	                                              Primates
+  0.02	1	0	O1	376913	                                                Haplorrhini
+  0.02	1	0	O2	314293	                                                  Simiiformes
+  0.02	1	0	O3	9526	                                                    Catarrhini
+  0.02	1	0	O4	314295	                                                      Hominoidea
+  0.02	1	0	F	9604	                                                        Hominidae
+  0.02	1	0	F1	207598	                                                          Homininae
+  0.02	1	0	G	9605	                                                            Homo
+  0.02	1	1	S	9606	                                                              Homo sapiens

@@ -1,0 +1,1 @@
+bwa mem -t 4 -M GRCh38_no_alt.fa humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.R1.fq humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.R2.fq | samtools sort -@ 4 -O bam -o humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.bam
