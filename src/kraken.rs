@@ -11,9 +11,10 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: KrakenConfig) {
     let filename = fasta.file_stem().expect("Failed to extract fasta file stem (are you sure you supplied a filepath and not a directory?)").to_str().expect("failed filepath to str conversion");
     let outfile_prefix = format!("{}/{}", config.outdir, filename);
     let outfile_report = format!("{}.kreport", outfile_prefix);
-    let outfile_unclassified = format!("{}.unclassified", outfile_prefix);
-    let outfile_classified = format!("{}.classified", outfile_prefix);
-    let outfile_output = format!("{}.output.tsv", outfile_prefix);
+    // let outfile_unclassified = format!("{}.unclassified", outfile_prefix);
+    // let outfile_classified = format!("{}.classified", outfile_prefix);
+    // let outfile_output = format!("{}.output.tsv", outfile_prefix);
+    let outfile_output = "-";
     let kraken_command = which::which("kraken2")
         .expect("Kraken2 not found. Please ensure it is installed and added to your PATH.");
 
@@ -21,14 +22,14 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: KrakenConfig) {
         shellexpand::full(config.krakendb.to_str().expect("failed to_str()"))
             .expect("Failed expansion of DB filepath");
 
-    eprintln!("Running Kraken");
+    eprintln!("\nRunning Kraken");
     let output = std::process::Command::new(kraken_command)
         .args(["--db", db.as_ref()])
         .args(["--threads", &config.threads.to_string()])
         .args(["--confidence", &config.confidence])
-        .args(["--unclassified-out", &outfile_unclassified])
-        .args(["--classified-out", &outfile_classified])
-        .args(["--output", &outfile_output])
+        // .args(["--unclassified-out", &outfile_unclassified])
+        // .args(["--classified-out", &outfile_classified])
+        .args(["--output", outfile_output])
         .args(["--report", &outfile_report])
         .arg(fasta)
         .output()
@@ -41,5 +42,5 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: KrakenConfig) {
             stderr_str
         )
     }
-    // .arg(arg);
+    eprintln!("\tKraken report saved to: {}", outfile_report);
 }

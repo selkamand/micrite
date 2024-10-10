@@ -2,9 +2,13 @@
 use core::str;
 use rust_htslib::bam::{self, record::Aux, FetchDefinition, Read, Record};
 use rust_htslib::errors::Error;
+use std::clone;
 use std::io::Write;
+use std::path::Path;
 
-pub fn bam2microbes(bam: &str, outdir: &str) -> std::path::PathBuf {
+use crate::kraken::KrakenConfig;
+
+pub fn bam2microbes(bam: &str, outdir: &str, config_kraken: KrakenConfig) {
     //Filepaths
     let bam_path = std::path::Path::new(bam);
     assert!(
@@ -20,14 +24,14 @@ pub fn bam2microbes(bam: &str, outdir: &str) -> std::path::PathBuf {
 
     let unmapped_fasta = format!("{outdir}/{bam_prefix}.fasta");
     // Create working directory
-    std::fs::create_dir_all(outdir).expect("Failed to create working directory");
+    std::fs::create_dir_all(outdir).expect("Failed to create output directory");
 
-    // Collect unmapped reads into FASTQ format
+    // Collect unmapped reads into FASTQAformat
     bam2unmappedreads(bam, unmapped_fasta.as_str(), 50, 17.0);
     eprintln!("Created fasta file of unmapped reads at {unmapped_fasta}");
 
-    // Return Path to fasta file
-    std::path::PathBuf::from(unmapped_fasta)
+    // Run Kraken
+    crate::kraken::run_kraken(unmapped_fasta.into(), config_kraken);
 }
 
 // Go from bam to unmapped reads
@@ -77,6 +81,35 @@ pub fn bam2unmappedreads(bam_path: &str, fasta_output_path: &str, min_len: usize
     eprintln!("\ttotal depth (number of reads): [{}]", total_reads);
     eprintln!("\ttotal mapped reads: [{}]", total_mapped_reads);
     eprintln!("\ttotal unmapped reads: [{}]", total_unmapped_reads);
+    // Write Bam Summary Stats
+    let outdir = Path::new(fasta_output_path)
+        .parent()
+        .unwrap_or(Path::new("."))
+        .to_str()
+        .unwrap();
+
+    let stem = Path::new(fasta_output_path)
+        .file_stem()
+        .unwrap()
+        .to_str()
+        .unwrap();
+
+    let mut summary_writer = std::fs::File::create(format!("{outdir}/{stem}.bam_summary.txt"))
+        .expect("failed to open connection to bam summary stats file");
+    writeln!(
+        summary_writer,
+        "total depth (number of reads)\t{}",
+        total_reads
+    )
+    .expect("Bam summary write failed");
+    writeln!(summary_writer, "total mapped reads\t{}", total_mapped_reads)
+        .expect("Bam summary write failed");
+    writeln!(
+        summary_writer,
+        "total unmapped reads\t{}",
+        total_unmapped_reads
+    )
+    .expect("Bam summary write failed");
 
     // Fetch Just the Unmapped reads (based on unmapped flag)
     // Note that some aligners may not set unmapped flag properly
@@ -162,6 +195,12 @@ pub fn bam2unmappedreads(bam_path: &str, fasta_output_path: &str, min_len: usize
             "\tgood quality sequences mapped: [{}]",
             nreads_good_sequence
         );
+        writeln!(
+            summary_writer,
+            "Contig [{}] good quality alignments\t{}",
+            contig_name, nreads_good_alignment
+        )
+        .expect("Failed write");
     }
 }
 
