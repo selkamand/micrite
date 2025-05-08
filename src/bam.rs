@@ -7,9 +7,11 @@ use std::path::Path;
 
 use crate::kraken::KrakenConfig;
 
-pub fn bam2microbes(bam: &str, outdir: &str, config_kraken: &KrakenConfig) {
+pub fn bam2microbes(bam: &str, config_kraken: &KrakenConfig) {
     //Filepaths
     let bam_path = std::path::Path::new(bam);
+    let outdir = &config_kraken.outdir;
+
     assert!(
         bam_path.exists(),
         "Could not find BAM file [{}]",
