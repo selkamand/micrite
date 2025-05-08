@@ -106,6 +106,10 @@ Once we have these unmapped reads do 1 of two processes.
 
 Some microbes, e.g. EBV, can be subtyped if coverage is sufficient.
 
+### Testing Data
+
+micrite comes packaged with a mini test kraken database ([krakendb](testfiles/krakendb)) comprised of human chromosome 2 from the T2T assembly + 3 viral genomes (Human gammaherpesvirus 8, Human gammaherpesvirus 4 (EBV), and Human papillomavirus)
+
 ## Other Tools
 
 **[virus-interpreter](https://github.com/hartwigmedical/hmftools/tree/master/virus-interpreter)**
