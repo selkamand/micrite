@@ -1,14 +1,13 @@
 // Take a path to a bam file
 use core::str;
-use rust_htslib::bam::{self, record::Aux, FetchDefinition, Read, Record};
+use rust_htslib::bam::{self, record::Aux, FetchDefinition, Read};
 use rust_htslib::errors::Error;
-use std::clone;
 use std::io::Write;
 use std::path::Path;
 
 use crate::kraken::KrakenConfig;
 
-pub fn bam2microbes(bam: &str, outdir: &str, config_kraken: KrakenConfig) {
+pub fn bam2microbes(bam: &str, outdir: &str, config_kraken: &KrakenConfig) {
     //Filepaths
     let bam_path = std::path::Path::new(bam);
     assert!(
@@ -31,7 +30,20 @@ pub fn bam2microbes(bam: &str, outdir: &str, config_kraken: KrakenConfig) {
     eprintln!("Created fasta file of unmapped reads at {unmapped_fasta}");
 
     // Run Kraken
-    crate::kraken::run_kraken(unmapped_fasta.into(), config_kraken);
+    let kraken_paths = crate::kraken::run_kraken(unmapped_fasta.clone().into(), config_kraken);
+
+    // Identify Kraken Hits
+    crate::kraken::identify_kraken_hits_from_kreport(
+        kraken_paths,
+        &config_kraken.kraken_hit_thresholds,
+    );
+
+    // Delete unmapped fastqs
+    eprintln!("Removing unmapped read file");
+    std::fs::remove_file(unmapped_fasta).expect("Failed to delete unmapped reads")
+
+    // Extract microbe specific reads for likely hits
+    // crate::kraken::extract_reads_from_microbial_hits
 }
 
 // Go from bam to unmapped reads
