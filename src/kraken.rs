@@ -30,7 +30,7 @@ impl CancerMicrobes {
     }
 
     // If Taxid
-    fn taxid_to_name(&self, taxid: &str) -> Option<&str> {
+    fn _taxid_to_name(&self, taxid: &str) -> Option<&str> {
         let species = self
             .microbes
             .iter()
@@ -86,11 +86,11 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: &KrakenConfig) -> KrakenOut
     std::fs::create_dir_all(&config.outdir).expect("Failed to create output directory");
     let filename = fasta.file_stem().expect("Failed to extract fasta file stem (are you sure you supplied a filepath and not a directory?)").to_str().expect("failed filepath to str conversion");
     let outfile_prefix = format!("{}/{}", config.outdir, filename);
-    let outfile_report = format!("{}.kreport", outfile_prefix);
+    let outfile_report = format!("{outfile_prefix}.kreport");
     // let outfile_unclassified = format!("{}.unclassified", outfile_prefix);
     // let outfile_classified = format!("{}.classified", outfile_prefix);
     let outfile_output = match config.output_std_file {
-        true => format!("{}.kout.tsv", outfile_prefix),
+        true => format!("{outfile_prefix}.kout.tsv"),
         false => "-".to_string(),
     };
 
@@ -115,7 +115,7 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: &KrakenConfig) -> KrakenOut
         .args(["--report", &outfile_report])
         .arg(&fasta);
 
-    eprintln!("\nRunning Kraken: {:?}", cmd_kraken);
+    eprintln!("\nRunning Kraken: {cmd_kraken:?}");
 
     // Run Kraken
     let output = cmd_kraken
@@ -124,12 +124,9 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: &KrakenConfig) -> KrakenOut
 
     if !output.status.success() {
         let stderr_str = String::from_utf8_lossy(&output.stderr);
-        panic!(
-            "\tKraken Run Failed. Stderr\n========\n{}\n========",
-            stderr_str
-        )
+        panic!("\tKraken Run Failed. Stderr\n========\n{stderr_str}\n========")
     }
-    eprintln!("\tKraken report saved to: {}", outfile_report);
+    eprintln!("\tKraken report saved to: {outfile_report}");
 
     let kout_path: Option<PathBuf> = match config.output_std_file {
         false => None,
@@ -150,24 +147,25 @@ struct KreportRecord {
     clade_percent_classified: f32, //% of reads classified as this taxid or child taxids
     clade_nreads_classified: u64,  //How many reads classified as this taxid or child taxids
     _taxon_nreads_classified: u64, //How many reads assigned directly to this taxid
-    _rank: String, // A rank code, indicating (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies. Taxa that are not at any of these 10 ranks have a rank code that is formed by using the rank code of the closest ancestor rank with a number indicating the distance from that rank. E.g., "G2" is a rank code indicating a taxon is between genus and species and the grandparent taxon is at the genus rank.
+    rank: String, // A rank code, indicating (U)nclassified, (R)oot, (D)omain, (K)ingdom, (P)hylum, (C)lass, (O)rder, (F)amily, (G)enus, or (S)pecies. Taxa that are not at any of these 10 ranks have a rank code that is formed by using the rank code of the closest ancestor rank with a number indicating the distance from that rank. E.g., "G2" is a rank code indicating a taxon is between genus and species and the grandparent taxon is at the genus rank.
     taxid: String, //NCBI taxonomic ID
-    name: String,  //Scientific Name
+    name: String, //Scientific Name
 }
 
 #[derive(serde::Serialize)]
 struct KrakenHit<'a> {
     taxid: &'a str,
+    rank: &'a str,
     name: &'a str,
     clade_percent_classified: &'a f32,
     clade_nreads_classified: &'a u64,
     oncogenic: &'a bool,
 }
 
-struct KrakenHits {
-    hits: Vec<KrakenHits>,
-    oncogenic_only: bool, // was this oncogenics only
-}
+// struct KrakenHits {
+//     hits: Vec<KrakenHits>,
+//     oncogenic_only: bool, // was this oncogenics only
+// }
 
 pub struct KrakenHitThresholds {
     pub min_prop_unmapped_reads: f32,
@@ -229,6 +227,7 @@ pub fn identify_kraken_hits_from_kreport(
             // Write to our output file
             wtr.serialize(KrakenHit {
                 taxid: &record.taxid,
+                rank: &record.rank,
                 name: &record.name,
                 clade_percent_classified: &record.clade_percent_classified,
                 clade_nreads_classified: &record.clade_nreads_classified,
@@ -248,15 +247,11 @@ pub fn identify_kraken_hits_from_kreport(
 
     if thresholds.oncogenic_only && n_non_oncogenics_excluded > 0 {
         eprintln!(
-            "Skipped reporting {} microbes despite kraken read support passing thresholds because they were not in our database of oncogenic microbes.",
-            n_non_oncogenics_excluded
+            "Skipped reporting {n_non_oncogenics_excluded} microbes despite kraken read support passing thresholds because they were not in our database of oncogenic microbes."
         )
     }
 
-    eprintln!(
-        "Found {} supected microbial hits{}",
-        n_microbial_hits, oncogenic_only_text
-    );
+    eprintln!("Found {n_microbial_hits} supected microbial hits{oncogenic_only_text}");
 
     eprintln!(
         "Putative kraken hits written to {:#?}",
