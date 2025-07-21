@@ -1,0 +1,14 @@
+taxid,name,clade_percent_classified,clade_nreads_classified,oncogenic
+0,unclassified,79.16,4695,false
+1,root,20.84,1236,false
+10239,Viruses,20.84,1236,false
+2731341,Duplodnaviria,20.84,1236,false
+2731360,Heunggongvirae,20.84,1236,false
+2731361,Peploviricota,20.84,1236,false
+2731363,Herviviricetes,20.84,1236,false
+548681,Herpesvirales,20.84,1236,false
+3044472,Orthoherpesviridae,20.84,1236,false
+10374,Gammaherpesvirinae,20.84,1236,false
+10375,Lymphocryptovirus,20.84,1236,false
+3050299,Lymphocryptovirus humangamma4,20.84,1236,false
+10376,human gammaherpesvirus 4,20.84,1236,true

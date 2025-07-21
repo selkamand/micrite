@@ -8,8 +8,8 @@ enum Commands {
     /// Screen bam for microbial presense
     Screen {
         /// File with paths to bam files (newline separated)
-        #[arg(short, long, value_name = "FileWithBamPaths")]
-        manifest: PathBuf,
+        #[arg(short, long, value_name = "BAM File")]
+        bam: PathBuf,
 
         /// Path to Kraken Database
         #[arg(short, long, value_name = "Kraken Database")]
@@ -63,7 +63,7 @@ fn main() {
 
     match &cli.command {
         Commands::Screen {
-            manifest,
+            bam,
             db,
             threads,
             confidence,
@@ -84,15 +84,9 @@ fn main() {
                 },
                 outdir: cli.outdir.display().to_string(),
             };
-            let manifest = manifest.to_str().unwrap();
 
-            // Iterate over list of bams
-            for bam in read_lines(manifest) {
-                eprintln!("\n\nBAM: {bam}");
-
-                // Identify Microbes from BAM
-                micrite::bam::bam2microbes(&bam, &config);
-            }
+            // Identify Microbes from BAM
+            micrite::bam::bam2microbes(bam, &config);
         }
         Commands::Sleuth => panic!("Validation is not yet implemented"),
         Commands::Subtype => todo!("Subtyping is not yet implemented"),

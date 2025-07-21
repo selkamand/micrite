@@ -3,21 +3,25 @@ use core::str;
 use rust_htslib::bam::{self, record::Aux, FetchDefinition, Read};
 use rust_htslib::errors::Error;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::kraken::KrakenConfig;
 
-pub fn bam2microbes(bam: &str, config_kraken: &KrakenConfig) {
+pub fn bam2microbes(bam: &PathBuf, config_kraken: &KrakenConfig) {
+    // Before running time-consuming code, check we have required dependencies
+    // including kraken2 (for metagenomic classification)
+    let _kraken_command = which::which("kraken2")
+        .expect("Kraken2 not found. Please ensure it is installed and added to your PATH.");
+
     //Filepaths
-    let bam_path = std::path::Path::new(bam);
     let outdir = &config_kraken.outdir;
 
     assert!(
-        bam_path.exists(),
+        bam.exists(),
         "Could not find BAM file [{}]",
-        bam_path.to_str().unwrap()
+        bam.to_str().unwrap()
     );
-    let bam_prefix = bam_path
+    let bam_prefix = bam
         .file_stem()
         .expect("failed to extract file stem")
         .to_str()
@@ -49,7 +53,12 @@ pub fn bam2microbes(bam: &str, config_kraken: &KrakenConfig) {
 }
 
 // Go from bam to unmapped reads
-pub fn bam2unmappedreads(bam_path: &str, fasta_output_path: &str, min_len: usize, min_phred: f64) {
+pub fn bam2unmappedreads(
+    bam_path: &PathBuf,
+    fasta_output_path: &str,
+    min_len: usize,
+    min_phred: f64,
+) {
     let microbial_contigs = common_microbial_contigs();
 
     // Create Bam Reader
@@ -57,7 +66,7 @@ pub fn bam2unmappedreads(bam_path: &str, fasta_output_path: &str, min_len: usize
     let mut bam = match bam_result {
         Ok(value) => value,
         Err(e) => {
-            panic!("An error occurred: {:?}", e);
+            panic!("An error occurred: {e:?}");
         }
     };
 
@@ -92,9 +101,10 @@ pub fn bam2unmappedreads(bam_path: &str, fasta_output_path: &str, min_len: usize
     let total_mapped_reads: u64 = idxstats.iter().map(|c| c.2).sum();
     let total_unmapped_reads: u64 = idxstats.iter().map(|c| c.3).sum();
     eprintln!("BAM-level summary:");
-    eprintln!("\ttotal depth (number of reads): [{}]", total_reads);
-    eprintln!("\ttotal mapped reads: [{}]", total_mapped_reads);
-    eprintln!("\ttotal unmapped reads: [{}]", total_unmapped_reads);
+    eprintln!("\ttotal depth (number of reads): [{total_reads}]");
+    eprintln!("\ttotal mapped reads: [{total_mapped_reads}]");
+    eprintln!("\ttotal unmapped reads: [{total_unmapped_reads}]");
+
     // Write Bam Summary Stats
     let outdir = Path::new(fasta_output_path)
         .parent()
@@ -112,16 +122,14 @@ pub fn bam2unmappedreads(bam_path: &str, fasta_output_path: &str, min_len: usize
         .expect("failed to open connection to bam summary stats file");
     writeln!(
         summary_writer,
-        "total depth (number of reads)\t{}",
-        total_reads
+        "total depth (number of reads)\t{total_reads}"
     )
     .expect("Bam summary write failed");
-    writeln!(summary_writer, "total mapped reads\t{}", total_mapped_reads)
+    writeln!(summary_writer, "total mapped reads\t{total_mapped_reads}")
         .expect("Bam summary write failed");
     writeln!(
         summary_writer,
-        "total unmapped reads\t{}",
-        total_unmapped_reads
+        "total unmapped reads\t{total_unmapped_reads}"
     )
     .expect("Bam summary write failed");
 
@@ -142,7 +150,7 @@ pub fn bam2unmappedreads(bam_path: &str, fasta_output_path: &str, min_len: usize
     let mut unmapped_good_quality_sequences: u64 = 0;
     let mut unmapped_counter: u64 = 0;
     for r in bam.records() {
-        let record = r.unwrap_or_else(|err| panic!("Failed to read bam record: {:?}", err));
+        let record = r.unwrap_or_else(|err| panic!("Failed to read bam record: {err:?}"));
         let bam_record = parse_record(&record);
         unmapped_counter += 1;
         // Write to the FASTA file in the correct format
@@ -157,11 +165,8 @@ pub fn bam2unmappedreads(bam_path: &str, fasta_output_path: &str, min_len: usize
         }
     }
     eprintln!("Unmapped Read Summary: ");
-    eprintln!("\ttotal unmapped reads: [{}]", unmapped_counter);
-    eprintln!(
-        "\tgood quality sequences: [{}]",
-        unmapped_good_quality_sequences
-    );
+    eprintln!("\ttotal unmapped reads: [{unmapped_counter}]");
+    eprintln!("\tgood quality sequences: [{unmapped_good_quality_sequences}]");
 
     // TODO: iterate through any contigs matching known microbial contigs and write mapped reads
     for contig_name in observed_microbial_contigs {
@@ -178,7 +183,7 @@ pub fn bam2unmappedreads(bam_path: &str, fasta_output_path: &str, min_len: usize
 
             nreads += 1;
 
-            if (!record.is_unmapped()) {
+            if !record.is_unmapped() {
                 nreads_mapped += 1
             }
 
@@ -199,20 +204,13 @@ pub fn bam2unmappedreads(bam_path: &str, fasta_output_path: &str, min_len: usize
                 nreads_good_alignment += 1
             }
         }
-        eprintln!("Microbial Contig Stats: {}", contig_name);
-        eprintln!("\ttotal reads mapped: [{}]", nreads_mapped);
-        eprintln!(
-            "\tgood quality alignments mapped: [{}]",
-            nreads_good_alignment
-        );
-        eprintln!(
-            "\tgood quality sequences mapped: [{}]",
-            nreads_good_sequence
-        );
+        eprintln!("Microbial Contig Stats: {contig_name}");
+        eprintln!("\ttotal reads mapped: [{nreads_mapped}]");
+        eprintln!("\tgood quality alignments mapped: [{nreads_good_alignment}]");
+        eprintln!("\tgood quality sequences mapped: [{nreads_good_sequence}]");
         writeln!(
             summary_writer,
-            "Contig [{}] good quality alignments\t{}",
-            contig_name, nreads_good_alignment
+            "Contig [{contig_name}] good quality alignments\t{nreads_good_alignment}"
         )
         .expect("Failed write");
     }
@@ -238,7 +236,7 @@ fn get_as_tag(record: &bam::Record) -> Option<i32> {
         Err(Error::BamAuxTagNotFound) => None, // AS tag not found
         Err(e) => {
             // Handle other potential errors
-            eprintln!("Error retrieving AS tag: {}", e);
+            eprintln!("Error retrieving AS tag: {e}");
             None
         }
     }
@@ -300,8 +298,7 @@ fn is_good_quality_sequence(
     }
 
     // TODO: Add a check based on sequence complexity
-
-    return true;
+    true
 }
 
 /// Is the alignment convincing

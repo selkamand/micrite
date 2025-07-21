@@ -123,3 +123,11 @@ Great if you have just 1 virus of interest and want to know if its in your fastq
 [**Hecatomb**](https://hecatomb.readthedocs.io/en/latest/)
 
 Great for detecting many viruses. Very modular, and less opinionated than micrite. Snakemate pipeline.
+
+### For Maintainers
+
+A collection of quick commands to test micrite functions are working appropriately
+
+```{r}
+cargo run -- --outdir outdir screen --bam testfiles/humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.bam  --db testfiles/database/krakendb/
+```
