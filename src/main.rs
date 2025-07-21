@@ -23,7 +23,7 @@ enum Commands {
         confidence: f32,
 
         /// Output std file
-        #[arg(long, default_value_t = true)]
+        #[arg(long, default_value_t = false)]
         output_std_file: bool,
 
         // Minimum proportion of unmapped reads that must be classified as a microbe to flag as a hit
