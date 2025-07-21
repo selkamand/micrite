@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use crate::kraken::KrakenConfig;
 
-pub fn bam2microbes(bam: &PathBuf, config_kraken: &KrakenConfig) {
+pub fn bam2microbes(bam_path: &PathBuf, config_kraken: &KrakenConfig) {
     // Before running time-consuming code, check we have required dependencies
     // including kraken2 (for metagenomic classification)
     let _kraken_command = which::which("kraken2")
@@ -17,11 +17,11 @@ pub fn bam2microbes(bam: &PathBuf, config_kraken: &KrakenConfig) {
     let outdir = &config_kraken.outdir;
 
     assert!(
-        bam.exists(),
+        bam_path.exists(),
         "Could not find BAM file [{}]",
-        bam.to_str().unwrap()
+        bam_path.to_str().unwrap()
     );
-    let bam_prefix = bam
+    let bam_prefix = bam_path
         .file_stem()
         .expect("failed to extract file stem")
         .to_str()
@@ -32,7 +32,7 @@ pub fn bam2microbes(bam: &PathBuf, config_kraken: &KrakenConfig) {
     std::fs::create_dir_all(outdir).expect("Failed to create output directory");
 
     // Collect unmapped reads into FASTQAformat
-    bam2unmappedreads(bam, unmapped_fasta.as_str(), 50, 17.0);
+    bam2unmappedreads(bam_path, unmapped_fasta.as_str(), 50, 17.0);
     eprintln!("Created fasta file of unmapped reads at {unmapped_fasta}");
 
     // Run Kraken
@@ -97,13 +97,14 @@ pub fn bam2unmappedreads(
 
     // Grab BAM Summary Stats
     let idxstats = bam.index_stats().expect("Failed to get index stats");
+
     let total_reads: u64 = idxstats.iter().map(|c| c.2 + c.3).sum();
     let total_mapped_reads: u64 = idxstats.iter().map(|c| c.2).sum();
     let total_unmapped_reads: u64 = idxstats.iter().map(|c| c.3).sum();
-    eprintln!("BAM-level summary:");
-    eprintln!("\ttotal depth (number of reads): [{total_reads}]");
-    eprintln!("\ttotal mapped reads: [{total_mapped_reads}]");
-    eprintln!("\ttotal unmapped reads: [{total_unmapped_reads}]");
+    eprintln!("BAM-level summary (each multi-map is counted independently):");
+    eprintln!("\ttotal records: [{total_reads}]");
+    eprintln!("\ttotal mapped: [{total_mapped_reads}]");
+    eprintln!("\ttotal unmapped: [{total_unmapped_reads}]");
 
     // Write Bam Summary Stats
     let outdir = Path::new(fasta_output_path)
@@ -120,20 +121,13 @@ pub fn bam2unmappedreads(
 
     let mut summary_writer = std::fs::File::create(format!("{outdir}/{stem}.bam_summary.txt"))
         .expect("failed to open connection to bam summary stats file");
-    writeln!(
-        summary_writer,
-        "total depth (number of reads)\t{total_reads}"
-    )
-    .expect("Bam summary write failed");
-    writeln!(summary_writer, "total mapped reads\t{total_mapped_reads}")
+    writeln!(summary_writer, "total records\t{total_reads}").expect("Bam summary write failed");
+    writeln!(summary_writer, "total mapped\t{total_mapped_reads}")
         .expect("Bam summary write failed");
-    writeln!(
-        summary_writer,
-        "total unmapped reads\t{total_unmapped_reads}"
-    )
-    .expect("Bam summary write failed");
+    writeln!(summary_writer, "total unmapped\t{total_unmapped_reads}")
+        .expect("Bam summary write failed");
 
-    // Fetch Just the Unmapped reads (based on unmapped flag)
+    // Fetch just the unmapped reads (based on unmapped flag)
     // Note that some aligners may not set unmapped flag properly
     // (e.g. sometimes if mate read maps the paired unmapped flag is not set).
     // Since the only way to get a complete set of unmapped reads is to manually
@@ -154,6 +148,7 @@ pub fn bam2unmappedreads(
         let bam_record = parse_record(&record);
         unmapped_counter += 1;
         // Write to the FASTA file in the correct format
+        // TODO: For now is_good_quality_sequence returns true for all. Add in this functionality.
         if is_good_quality_sequence(&bam_record, 50, 17.0, 2) {
             unmapped_good_quality_sequences += 1;
             writeln!(
@@ -168,7 +163,7 @@ pub fn bam2unmappedreads(
     eprintln!("\ttotal unmapped reads: [{unmapped_counter}]");
     eprintln!("\tgood quality sequences: [{unmapped_good_quality_sequences}]");
 
-    // TODO: iterate through any contigs matching known microbial contigs and write mapped reads
+    // Iterate through all contigs matching known microbial contigs and write mapped reads
     for contig_name in observed_microbial_contigs {
         bam.fetch(&contig_name)
             .expect("Error fetching bam sequences from specific contigs");
@@ -188,6 +183,7 @@ pub fn bam2unmappedreads(
             }
 
             // Write good quality sequences mapped to microbial contigs to the fasta file
+            // TODO: is_good_quality_sequence is currently a dummy function. Implement functionality
             if !record.is_unmapped() & is_good_quality_sequence(&bam_record, 50, 17.0, 2) {
                 nreads_good_sequence += 1;
                 writeln!(
@@ -199,7 +195,7 @@ pub fn bam2unmappedreads(
             }
 
             // Count Number of Good Quality Alignments
-            // TODO: MAke alignment scores (AS) sequence length independent (might end up making micrite even more aligner specific though)
+            // TODO: Make alignment scores (AS) sequence length independent (might end up making micrite even more aligner specific though)
             if is_good_quality_alignment(&bam_record, 50, 17.0, 2, 10, 130) {
                 nreads_good_alignment += 1
             }

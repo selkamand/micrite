@@ -1,5 +1,4 @@
 use clap::{Parser, Subcommand};
-use micrite::kraken::KrakenConfig;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 
@@ -95,7 +94,7 @@ fn main() {
     eprintln!("finished")
 }
 
-fn read_lines(filename: &str) -> Vec<String> {
+fn _read_lines(filename: &str) -> Vec<String> {
     read_to_string(filename)
         .unwrap() // panic on possible file-reading errors
         .lines() // split the string into an iterator of string slices

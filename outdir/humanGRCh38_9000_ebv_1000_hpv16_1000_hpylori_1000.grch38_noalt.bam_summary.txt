@@ -1,4 +1,4 @@
-total depth (number of reads)	23897
-total mapped reads	19040
-total unmapped reads	4857
+total records	23897
+total mapped	19040
+total unmapped	4857
 Contig [chrEBV] good quality alignments	1093
