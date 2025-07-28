@@ -1,14 +1,12 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-    string,
-};
+use std::path::PathBuf;
 
 pub struct KrakenConfig {
     pub krakendb: PathBuf,
     pub threads: u8,
     pub confidence: String,
-    pub output_std_file: bool, // Should std kraken tsv mapping readnames to taxids be output (large files, but required for pulling out taxid-specific reads)
+    pub cleanup_std_file: bool, // Should std kraken tsv mapping readnames to taxids be output (large files, but required for pulling out taxid-specific reads)
+    pub cleanup_unmapped: bool, // Should unmapped reads extracted from bams be kept after use?
+    pub report_zero_counts: bool, // Should kraken report include species with no read support?
     pub kraken_hit_thresholds: KrakenHitThresholds,
     pub outdir: String,
 }
@@ -89,9 +87,9 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: &KrakenConfig) -> KrakenOut
     let outfile_report = format!("{outfile_prefix}.kreport");
     // let outfile_unclassified = format!("{}.unclassified", outfile_prefix);
     // let outfile_classified = format!("{}.classified", outfile_prefix);
-    let outfile_output = match config.output_std_file {
-        true => format!("{outfile_prefix}.kout.tsv"),
-        false => "-".to_string(),
+    let outfile_output = match config.cleanup_std_file {
+        false => format!("{outfile_prefix}.kout.tsv"),
+        true => "-".to_string(),
     };
 
     let kraken_command = which::which("kraken2")
@@ -105,7 +103,7 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: &KrakenConfig) -> KrakenOut
 
     // Build KrakenCommand
     let mut binding = std::process::Command::new(kraken_command);
-    let cmd_kraken = binding
+    let mut cmd_kraken = binding
         .args(["--db", db.as_ref()])
         .args(["--threads", &config.threads.to_string()])
         .args(["--confidence", &config.confidence])
@@ -115,6 +113,9 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: &KrakenConfig) -> KrakenOut
         .args(["--report", &outfile_report])
         .arg(&fasta);
 
+    if config.report_zero_counts {
+        cmd_kraken.args(["--report-zero-counts"]);
+    }
     eprintln!("\nRunning Kraken: {cmd_kraken:?}");
 
     // Run Kraken
@@ -128,9 +129,9 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: &KrakenConfig) -> KrakenOut
     }
     eprintln!("\tKraken report saved to: {outfile_report}");
 
-    let kout_path: Option<PathBuf> = match config.output_std_file {
-        false => None,
-        true => Some(outfile_output.into()),
+    let kout_path: Option<PathBuf> = match config.cleanup_std_file {
+        true => None,
+        false => Some(outfile_output.into()),
     };
 
     // Return the output paths
@@ -257,4 +258,42 @@ pub fn identify_kraken_hits_from_kreport(
         "Putative kraken hits written to {:#?}",
         &oncogenic_microbe_counts
     )
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct KrakenStdRecords {
+    classification_status: String,
+    sequence_id: String,
+    taxid: u64,
+    lca_mapping: String,
+}
+
+/// Extract reads matching a specific taxid from a bam
+fn extract_reads(path_kout: &PathBuf, taxid: u64, path_bam: &PathBuf) {
+    // Check if the .kout file exists
+    if !path_kout.exists() {
+        panic!(
+            "Failed to find standard kraken output (.kout) file: {}",
+            path_kout.display()
+        );
+    }
+
+    // Read .kout file using CSV reader
+    let mut rdr = csv::ReaderBuilder::new()
+        .delimiter(b'\t')
+        .has_headers(false)
+        .from_path(path_kout)
+        .unwrap_or_else(|_| {
+            panic!(
+                "Failed to parse kraken std output file: {}",
+                path_kout.display()
+            )
+        });
+
+    for result in rdr.deserialize() {
+        let record: KrakenStdRecords =
+            result.expect("Failed to parse record in kraken std output file");
+
+        if record.taxid == taxid {}
+    }
 }

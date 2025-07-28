@@ -24,7 +24,15 @@ enum Commands {
 
         /// Output std file
         #[arg(long, default_value_t = false)]
-        output_std_file: bool,
+        cleanup_std_file: bool,
+
+        /// Delete unmapped reads extracted from bam file after use
+        #[arg(long, default_value_t = false)]
+        cleanup_unmapped: bool,
+
+        /// Include zero counts in kraken report
+        #[arg(long, default_value_t = false)]
+        report_zero_counts: bool,
 
         // Minimum proportion of unmapped reads that must be classified as a microbe to flag as a hit
         #[arg(short = 'p', long, default_value_t = 0.01)]
@@ -66,7 +74,9 @@ fn main() {
             db,
             threads,
             confidence,
-            output_std_file,
+            cleanup_std_file,
+            cleanup_unmapped,
+            report_zero_counts,
             min_prop_unmapped_reads,
             min_number_unmapped_reads,
             oncogenic_only,
@@ -75,7 +85,9 @@ fn main() {
                 krakendb: db.clone(),
                 threads: *threads,
                 confidence: confidence.to_string(),
-                output_std_file: *output_std_file,
+                cleanup_std_file: *cleanup_std_file,
+                cleanup_unmapped: *cleanup_unmapped,
+                report_zero_counts: *report_zero_counts,
                 kraken_hit_thresholds: micrite::kraken::KrakenHitThresholds {
                     min_prop_unmapped_reads: *min_prop_unmapped_reads,
                     min_number_reads: *min_number_unmapped_reads,

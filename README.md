@@ -27,17 +27,9 @@ We break operations into two groups. **Screen** for microbial detection, **Sleut
 # display help
 micrite --help
 
-# Run micrite
-# Automatically chooses the screening methods to use, and if it finds anything, will run sleuth and subtyping modules.
-micrite mine --taxids 10376,10407
+# Screen a bam for microbes in the supplied database. If any hits are found, extract reads 
+micrite screen --extract-reads 10376 --db <kraken_database> <bam>
 
-
-# Rapid Screen for EBV where sample is positive if > 1% of all reads align to an EBV contig
-micrite screen superfast --taxids 10376 --prop 0.01 <bam>
-
-# Slower for EBV assuming you have EBV in your reference genome
-# This differs from above - instead of just looking at a idxstats file, we got through the EBV genome alignments and ensure our signal comes high quality reads aligned to mappable regions
-micrite screen quick --microbes 10376
 
 # Search bam for microbes using kraken database
 micrite screen full kraken --db "plusPF" --taxids 10376,10407 <bam>

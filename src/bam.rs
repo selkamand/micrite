@@ -45,8 +45,10 @@ pub fn bam2microbes(bam_path: &PathBuf, config_kraken: &KrakenConfig) {
     );
 
     // Delete unmapped fastqs
-    eprintln!("Removing unmapped read file");
-    std::fs::remove_file(unmapped_fasta).expect("Failed to delete unmapped reads")
+    if config_kraken.cleanup_unmapped {
+        eprintln!("Removing unmapped read file");
+        std::fs::remove_file(unmapped_fasta).expect("Failed to delete unmapped reads");
+    }
 
     // Extract microbe specific reads for likely hits
     // crate::kraken::extract_reads_from_microbial_hits
@@ -273,7 +275,6 @@ fn is_good_quality_sequence(
     max_n: usize,
 ) -> bool {
     // Start with the quick checks
-
     if record.record.is_quality_check_failed()
         | record.record.is_duplicate()
         | (record.record.seq_len() < min_len)
