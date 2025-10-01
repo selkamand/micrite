@@ -1,4 +1,6 @@
 // Take a path to a bam file
+use crate::hostdepletion;
+use crate::hostdepletion::DeaconConfig;
 use crate::kraken::KrakenConfig;
 use anyhow::Context;
 use core::str;
@@ -7,9 +9,16 @@ use rust_htslib::errors::Error;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-pub fn bam2microbes(bam_path: &PathBuf, config_kraken: &KrakenConfig) -> Result<(), anyhow::Error> {
+pub fn bam2microbes(
+    bam_path: &PathBuf,
+    config_kraken: &KrakenConfig,
+    config_deacon: &DeaconConfig,
+) -> Result<(), anyhow::Error> {
     // Before running time-consuming code, check we have required dependencies
-    // including kraken2 (for metagenomic classification)
+    // including deacon (host depletion) and kraken2 (for metagenomic classification)
+    let _deacon_command = which::which("deacon")
+        .context("`deacon` not found. Ensure it is installed and in your PATH. See https://github.com/bede/deacon")?;
+
     let _kraken_command = which::which("kraken2")
         .context("Kraken2 not found. Please ensure it is installed and added to your PATH.")?;
 
@@ -27,22 +36,32 @@ pub fn bam2microbes(bam_path: &PathBuf, config_kraken: &KrakenConfig) -> Result<
         .to_str()
         .context("Failed to convert bam file stem into prefix")?;
 
-    let unmapped_fasta = format!("{outdir}/{bam_prefix}.fasta");
+    let unmapped_fasta = format!("{outdir}/{bam_prefix}.unmapped.fasta");
+    let unmapped_host_depleted_fasta = format!("{outdir}/{bam_prefix}.unmapped.hostdepleted.fasta");
+
     // Create working directory
     std::fs::create_dir_all(outdir).context("Failed to create output directory")?;
 
     // Collect unmapped reads into FASTQAformat
-    bam2unmappedreads(bam_path, unmapped_fasta.as_str(), 50, 17.0);
+    bam2unmappedreads(bam_path, unmapped_fasta.as_str(), 50, 17.0)?;
     log::info!("Created fasta file of unmapped reads at {unmapped_fasta}");
 
+    // Apply host Depletion using Deacon
+    hostdepletion::host_depletion(
+        &PathBuf::from(&unmapped_fasta),
+        &PathBuf::from(&unmapped_host_depleted_fasta),
+        config_deacon,
+    )?;
+
     // Run Kraken
-    let kraken_paths = crate::kraken::run_kraken(unmapped_fasta.clone().into(), config_kraken)?;
+    let kraken_paths =
+        crate::kraken::run_kraken(unmapped_host_depleted_fasta.clone().into(), config_kraken)?;
 
     // Identify Kraken Hits
     crate::kraken::identify_kraken_hits_from_kreport(
         kraken_paths,
         &config_kraken.kraken_hit_thresholds,
-    );
+    )?;
 
     // Delete unmapped fastqs
     if config_kraken.cleanup_unmapped {
