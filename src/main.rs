@@ -1,4 +1,6 @@
 use clap::{Parser, Subcommand};
+use env_logger::Env;
+use log::LevelFilter;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 
@@ -65,7 +67,24 @@ struct Cli {
     outdir: PathBuf,
 }
 
+fn setup_logger() {
+    env_logger::Builder::from_env(Env::default().default_filter_or("info"))
+        .format_timestamp_secs()
+        .init();
+}
 fn main() {
+    // Setup logger
+    setup_logger();
+
+    // Run main function
+    if let Err(err) = run() {
+        // One place to log the top-level error (and its causes)
+        log::error!("{err:?}"); // or `{:#}` for pretty, or just `{}` for brief
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), anyhow::Error> {
     let cli = Cli::parse();
 
     match &cli.command {
@@ -97,13 +116,15 @@ fn main() {
             };
 
             // Identify Microbes from BAM
-            micrite::bam::bam2microbes(bam, &config);
+            micrite::bam::bam2microbes(bam, &config)?;
         }
+
         Commands::Sleuth => panic!("Validation is not yet implemented"),
         Commands::Subtype => todo!("Subtyping is not yet implemented"),
     }
 
-    eprintln!("finished")
+    log::info!("Micrite run completed");
+    Ok(())
 }
 
 fn _read_lines(filename: &str) -> Vec<String> {

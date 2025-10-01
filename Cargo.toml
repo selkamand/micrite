@@ -6,9 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.100"
 clap = { version = "4.5.37", features = ["derive"] }
 csv = "1.3.1"
+env_logger = "0.11.8"
 krakenutils = { git = "https://github.com/selkamand/krakenutils", version = "0.1.0" }
+log = "0.4.28"
 rust-htslib = "0.46.0"
 serde = { version = "1.0.210", features = ["derive"] }
 shellexpand = "3.1.0"

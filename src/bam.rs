@@ -1,17 +1,17 @@
 // Take a path to a bam file
+use crate::kraken::KrakenConfig;
+use anyhow::Context;
 use core::str;
 use rust_htslib::bam::{self, record::Aux, FetchDefinition, Read};
 use rust_htslib::errors::Error;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use crate::kraken::KrakenConfig;
-
-pub fn bam2microbes(bam_path: &PathBuf, config_kraken: &KrakenConfig) {
+pub fn bam2microbes(bam_path: &PathBuf, config_kraken: &KrakenConfig) -> Result<(), anyhow::Error> {
     // Before running time-consuming code, check we have required dependencies
     // including kraken2 (for metagenomic classification)
     let _kraken_command = which::which("kraken2")
-        .expect("Kraken2 not found. Please ensure it is installed and added to your PATH.");
+        .context("Kraken2 not found. Please ensure it is installed and added to your PATH.")?;
 
     //Filepaths
     let outdir = &config_kraken.outdir;
@@ -23,20 +23,20 @@ pub fn bam2microbes(bam_path: &PathBuf, config_kraken: &KrakenConfig) {
     );
     let bam_prefix = bam_path
         .file_stem()
-        .expect("failed to extract file stem")
+        .context("failed to extract file stem")?
         .to_str()
-        .expect("Failed to convert bam file stem into prefix");
+        .context("Failed to convert bam file stem into prefix")?;
 
     let unmapped_fasta = format!("{outdir}/{bam_prefix}.fasta");
     // Create working directory
-    std::fs::create_dir_all(outdir).expect("Failed to create output directory");
+    std::fs::create_dir_all(outdir).context("Failed to create output directory")?;
 
     // Collect unmapped reads into FASTQAformat
     bam2unmappedreads(bam_path, unmapped_fasta.as_str(), 50, 17.0);
-    eprintln!("Created fasta file of unmapped reads at {unmapped_fasta}");
+    log::info!("Created fasta file of unmapped reads at {unmapped_fasta}");
 
     // Run Kraken
-    let kraken_paths = crate::kraken::run_kraken(unmapped_fasta.clone().into(), config_kraken);
+    let kraken_paths = crate::kraken::run_kraken(unmapped_fasta.clone().into(), config_kraken)?;
 
     // Identify Kraken Hits
     crate::kraken::identify_kraken_hits_from_kreport(
@@ -46,12 +46,15 @@ pub fn bam2microbes(bam_path: &PathBuf, config_kraken: &KrakenConfig) {
 
     // Delete unmapped fastqs
     if config_kraken.cleanup_unmapped {
-        eprintln!("Removing unmapped read file");
-        std::fs::remove_file(unmapped_fasta).expect("Failed to delete unmapped reads");
+        log::info!("Removing unmapped read file");
+        std::fs::remove_file(unmapped_fasta).context("Failed to delete unmapped reads")?;
     }
 
     // Extract microbe specific reads for likely hits
     // crate::kraken::extract_reads_from_microbial_hits
+
+    // Return
+    Ok(())
 }
 
 // Go from bam to unmapped reads
@@ -60,7 +63,7 @@ pub fn bam2unmappedreads(
     fasta_output_path: &str,
     min_len: usize,
     min_phred: f64,
-) {
+) -> Result<(), anyhow::Error> {
     let microbial_contigs = common_microbial_contigs();
 
     // Create Bam Reader
@@ -81,7 +84,7 @@ pub fn bam2unmappedreads(
         .collect();
     // Braces set to end mutable borrow of bam.header()
 
-    // eprintln!("Bam has the following contigs: {:#?}", contigs);
+    // log::info!("Bam has the following contigs: {:#?}", contigs);
     let observed_microbial_contigs: Vec<String> = contigs
         .iter()
         .filter(|c| microbial_contigs.contains(c))
@@ -90,7 +93,7 @@ pub fn bam2unmappedreads(
 
     // Check if we found any microbial contigs
     if !observed_microbial_contigs.is_empty() {
-        eprintln!(
+        log::info!(
             "Found {} contigs in bam that are probably microbial: [{}]",
             observed_microbial_contigs.len(),
             observed_microbial_contigs.join(",")
@@ -98,15 +101,15 @@ pub fn bam2unmappedreads(
     }
 
     // Grab BAM Summary Stats
-    let idxstats = bam.index_stats().expect("Failed to get index stats");
+    let idxstats = bam.index_stats().context("Failed to get index stats")?;
 
     let total_reads: u64 = idxstats.iter().map(|c| c.2 + c.3).sum();
     let total_mapped_reads: u64 = idxstats.iter().map(|c| c.2).sum();
     let total_unmapped_reads: u64 = idxstats.iter().map(|c| c.3).sum();
-    eprintln!("BAM-level summary (each multi-map is counted independently):");
-    eprintln!("\ttotal records: [{total_reads}]");
-    eprintln!("\ttotal mapped: [{total_mapped_reads}]");
-    eprintln!("\ttotal unmapped: [{total_unmapped_reads}]");
+    log::info!("BAM-level summary (each multi-map is counted independently):");
+    log::info!("\ttotal records: [{total_reads}]");
+    log::info!("\ttotal mapped: [{total_mapped_reads}]");
+    log::info!("\ttotal unmapped: [{total_unmapped_reads}]");
 
     // Write Bam Summary Stats
     let outdir = Path::new(fasta_output_path)
@@ -122,12 +125,12 @@ pub fn bam2unmappedreads(
         .unwrap();
 
     let mut summary_writer = std::fs::File::create(format!("{outdir}/{stem}.bam_summary.txt"))
-        .expect("failed to open connection to bam summary stats file");
-    writeln!(summary_writer, "total records\t{total_reads}").expect("Bam summary write failed");
+        .context("failed to open connection to bam summary stats file")?;
+    writeln!(summary_writer, "total records\t{total_reads}").context("Bam summary write failed")?;
     writeln!(summary_writer, "total mapped\t{total_mapped_reads}")
-        .expect("Bam summary write failed");
+        .context("Bam summary write failed")?;
     writeln!(summary_writer, "total unmapped\t{total_unmapped_reads}")
-        .expect("Bam summary write failed");
+        .context("Bam summary write failed")?;
 
     // Fetch just the unmapped reads (based on unmapped flag)
     // Note that some aligners may not set unmapped flag properly
@@ -136,18 +139,18 @@ pub fn bam2unmappedreads(
     // look through cigar strings of every read, we're going to assume
     // upstream aligners do the right thing.
     bam.fetch(FetchDefinition::Unmapped)
-        .expect("Failed to fetch unmapped reads from bam");
+        .context("Failed to fetch unmapped reads from bam")?;
 
     // Open the output FASTA file
     let mut fasta_writer = std::fs::File::create(fasta_output_path)
-        .expect("fasta file to output unmapped reads could not be created");
+        .context("fasta file to output unmapped reads could not be created")?;
 
     // Iterate through Unmapped reads and Save to FASTA if they're good quality
     let mut unmapped_good_quality_sequences: u64 = 0;
     let mut unmapped_counter: u64 = 0;
     for r in bam.records() {
         let record = r.unwrap_or_else(|err| panic!("Failed to read bam record: {err:?}"));
-        let bam_record = parse_record(&record);
+        let bam_record = parse_record(&record)?;
         unmapped_counter += 1;
         // Write to the FASTA file in the correct format
         // TODO: For now is_good_quality_sequence returns true for all. Add in this functionality.
@@ -158,17 +161,17 @@ pub fn bam2unmappedreads(
                 ">{}\n{}",
                 bam_record.qname, bam_record.sequence
             )
-            .expect("Failed to write unmapped read to FASTA file");
+            .context("Failed to write unmapped read to FASTA file")?;
         }
     }
-    eprintln!("Unmapped Read Summary: ");
-    eprintln!("\ttotal unmapped reads: [{unmapped_counter}]");
-    eprintln!("\tgood quality sequences: [{unmapped_good_quality_sequences}]");
+    log::info!("Unmapped Read Summary: ");
+    log::info!("\ttotal unmapped reads: [{unmapped_counter}]");
+    log::info!("\tgood quality sequences: [{unmapped_good_quality_sequences}]");
 
     // Iterate through all contigs matching known microbial contigs and write mapped reads
     for contig_name in observed_microbial_contigs {
         bam.fetch(&contig_name)
-            .expect("Error fetching bam sequences from specific contigs");
+            .context("Error fetching bam sequences from specific contigs")?;
 
         let mut nreads: u64 = 0;
         let mut nreads_mapped: u64 = 0;
@@ -176,7 +179,7 @@ pub fn bam2unmappedreads(
         let mut nreads_good_alignment: u64 = 0;
         for r in bam.records() {
             let record = r.unwrap_or_else(|err| panic!("Failed to read bam record: {:?}", err));
-            let bam_record = parse_record(&record);
+            let bam_record = parse_record(&record)?;
 
             nreads += 1;
 
@@ -193,7 +196,7 @@ pub fn bam2unmappedreads(
                     ">{}\n{}",
                     bam_record.qname, bam_record.sequence
                 )
-                .expect("Failed to write unmapped read to FASTA file");
+                .context("Failed to write unmapped read to FASTA file")?;
             }
 
             // Count Number of Good Quality Alignments
@@ -202,16 +205,18 @@ pub fn bam2unmappedreads(
                 nreads_good_alignment += 1
             }
         }
-        eprintln!("Microbial Contig Stats: {contig_name}");
-        eprintln!("\ttotal reads mapped: [{nreads_mapped}]");
-        eprintln!("\tgood quality alignments mapped: [{nreads_good_alignment}]");
-        eprintln!("\tgood quality sequences mapped: [{nreads_good_sequence}]");
+        log::info!("Microbial Contig Stats: {contig_name}");
+        log::info!("\ttotal reads mapped: [{nreads_mapped}]");
+        log::info!("\tgood quality alignments mapped: [{nreads_good_alignment}]");
+        log::info!("\tgood quality sequences mapped: [{nreads_good_sequence}]");
         writeln!(
             summary_writer,
             "Contig [{contig_name}] good quality alignments\t{nreads_good_alignment}"
         )
-        .expect("Failed write");
+        .context("Failed to write counts of good quality alignments to bam_summary")?;
     }
+
+    Ok(())
 }
 
 // A custom struct that adds a couple of key properties to bam::record
@@ -234,25 +239,25 @@ fn get_as_tag(record: &bam::Record) -> Option<i32> {
         Err(Error::BamAuxTagNotFound) => None, // AS tag not found
         Err(e) => {
             // Handle other potential errors
-            eprintln!("Error retrieving AS tag: {e}");
+            log::info!("Error retrieving AS tag: {e}");
             None
         }
     }
 }
 
-fn parse_record(record: &bam::Record) -> BamRecordEnriched {
+fn parse_record(record: &bam::Record) -> Result<BamRecordEnriched, anyhow::Error> {
     // Run computationally intensive checks
     let seq = record.seq().as_bytes();
     let sequence: String = seq.iter().map(|&b| b as char).collect();
-    let qname = str::from_utf8(record.qname()).expect("Failed to parse qname to string slice");
+    let qname = str::from_utf8(record.qname()).context("Failed to parse qname to string slice")?;
     let alignment_score = get_as_tag(record).unwrap_or(0);
 
-    BamRecordEnriched {
+    Ok(BamRecordEnriched {
         record,
         qname,
         sequence,
         alignment_score,
-    }
+    })
 }
 
 /// Check whether a bam sequence is considered 'good quality'.

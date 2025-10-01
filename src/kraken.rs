@@ -1,3 +1,4 @@
+use anyhow::Context;
 use std::path::PathBuf;
 
 pub struct KrakenConfig {
@@ -80,9 +81,12 @@ pub struct KrakenOutputPaths {
     pub prefix: String,
 }
 
-pub fn run_kraken(fasta: std::path::PathBuf, config: &KrakenConfig) -> KrakenOutputPaths {
-    std::fs::create_dir_all(&config.outdir).expect("Failed to create output directory");
-    let filename = fasta.file_stem().expect("Failed to extract fasta file stem (are you sure you supplied a filepath and not a directory?)").to_str().expect("failed filepath to str conversion");
+pub fn run_kraken(
+    fasta: std::path::PathBuf,
+    config: &KrakenConfig,
+) -> Result<KrakenOutputPaths, anyhow::Error> {
+    std::fs::create_dir_all(&config.outdir).context("Failed to create output directory")?;
+    let filename = fasta.file_stem().context("Failed to extract fasta file stem (are you sure you supplied a filepath and not a directory?)")?.to_str().context("failed filepath to str conversion")?;
     let outfile_prefix = format!("{}/{}", config.outdir, filename);
     let outfile_report = format!("{outfile_prefix}.kreport");
     // let outfile_unclassified = format!("{}.unclassified", outfile_prefix);
@@ -93,17 +97,17 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: &KrakenConfig) -> KrakenOut
     };
 
     let kraken_command = which::which("kraken2")
-        .expect("Kraken2 not found. Please ensure it is installed and added to your PATH.");
+        .context("Kraken2 not found. Please ensure it is installed and added to your PATH.")?;
 
     let db: std::borrow::Cow<'_, str> =
-        shellexpand::full(config.krakendb.to_str().expect("failed to_str()"))
-            .expect("Failed expansion of DB filepath");
+        shellexpand::full(config.krakendb.to_str().context("failed to_str()")?)
+            .context("Failed expansion of DB filepath")?;
 
-    eprintln!("\nRunning Kraken:");
+    log::info!("\nRunning Kraken:");
 
     // Build KrakenCommand
     let mut binding = std::process::Command::new(kraken_command);
-    let mut cmd_kraken = binding
+    let cmd_kraken = binding
         .args(["--db", db.as_ref()])
         .args(["--threads", &config.threads.to_string()])
         .args(["--confidence", &config.confidence])
@@ -116,18 +120,18 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: &KrakenConfig) -> KrakenOut
     if config.report_zero_counts {
         cmd_kraken.args(["--report-zero-counts"]);
     }
-    eprintln!("\nRunning Kraken: {cmd_kraken:?}");
+    log::info!("\nRunning Kraken: {cmd_kraken:?}");
 
     // Run Kraken
     let output = cmd_kraken
         .output()
-        .expect("Failed to run Kraken2 classification");
+        .context("Failed to run Kraken2 classification")?;
 
     if !output.status.success() {
         let stderr_str = String::from_utf8_lossy(&output.stderr);
         panic!("\tKraken Run Failed. Stderr\n========\n{stderr_str}\n========")
     }
-    eprintln!("\tKraken report saved to: {outfile_report}");
+    log::info!("\tKraken report saved to: {outfile_report}");
 
     let kout_path: Option<PathBuf> = match config.cleanup_std_file {
         true => None,
@@ -135,12 +139,12 @@ pub fn run_kraken(fasta: std::path::PathBuf, config: &KrakenConfig) -> KrakenOut
     };
 
     // Return the output paths
-    KrakenOutputPaths {
+    Ok(KrakenOutputPaths {
         kout: kout_path,
         input_fasta: fasta,
         kreport: outfile_report.into(),
         prefix: outfile_prefix,
-    }
+    })
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -177,19 +181,19 @@ pub struct KrakenHitThresholds {
 pub fn identify_kraken_hits_from_kreport(
     paths: KrakenOutputPaths,
     thresholds: &KrakenHitThresholds,
-) {
+) -> Result<(), anyhow::Error> {
     // Create reader for kraken report
     let mut rdr_kreport = csv::ReaderBuilder::new()
         .delimiter(b'\t')
         .has_headers(false)
         .trim(csv::Trim::All)
         .from_path(paths.kreport)
-        .expect("failed to read kreport");
+        .context("failed to read kreport")?;
 
     // Create writer
     let oncogenic_microbe_counts: PathBuf = format!("{}.krakenhits.csv", paths.prefix).into();
     let mut wtr = csv::Writer::from_path(&oncogenic_microbe_counts)
-        .expect("Failed to create writer to oncogenic microbe count filepath");
+        .context("Failed to create writer to oncogenic microbe count filepath")?;
 
     // List of oncogenic microbes
     let cancer_microbes = cancer_microbes();
@@ -200,7 +204,7 @@ pub fn identify_kraken_hits_from_kreport(
         false => " ",
     };
 
-    eprintln!(
+    log::info!(
         "Checking kraken reports for microbes{}with >= {} supporting reads & account for >= {:4.1} % of all unmapped reads",
         oncogenic_only_text,
         thresholds.min_number_reads,
@@ -210,7 +214,7 @@ pub fn identify_kraken_hits_from_kreport(
     let mut n_non_oncogenics_excluded: u64 = 0;
     let mut n_microbial_hits: u64 = 0;
     for records_result in rdr_kreport.deserialize() {
-        let record: KreportRecord = records_result.expect("Failed to read kreport record");
+        let record: KreportRecord = records_result.context("Failed to read kreport record")?;
 
         let is_oncogenic_microbe = cancer_microbes.contains(record.taxid.as_str());
 
@@ -234,12 +238,14 @@ pub fn identify_kraken_hits_from_kreport(
                 clade_nreads_classified: &record.clade_nreads_classified,
                 oncogenic: &is_oncogenic_microbe,
             })
-            .expect("Failed to write KrakenHit");
+            .context("Failed to write KrakenHit")?;
 
             n_microbial_hits += 1;
-            eprintln!(
+            log::info!(
                 "Found {} reads from microbe [{}],  ({:4.1}% of all unmapped reads)",
-                record.clade_nreads_classified, record.name, record.clade_percent_classified
+                record.clade_nreads_classified,
+                record.name,
+                record.clade_percent_classified
             )
         }
 
@@ -247,17 +253,19 @@ pub fn identify_kraken_hits_from_kreport(
     }
 
     if thresholds.oncogenic_only && n_non_oncogenics_excluded > 0 {
-        eprintln!(
+        log::info!(
             "Skipped reporting {n_non_oncogenics_excluded} microbes despite kraken read support passing thresholds because they were not in our database of oncogenic microbes."
         )
     }
 
-    eprintln!("Found {n_microbial_hits} supected microbial hits{oncogenic_only_text}");
+    log::info!("Found {n_microbial_hits} supected microbial hits{oncogenic_only_text}");
 
-    eprintln!(
+    log::info!(
         "Putative kraken hits written to {:#?}",
         &oncogenic_microbe_counts
-    )
+    );
+
+    Ok(())
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -269,7 +277,7 @@ struct KrakenStdRecords {
 }
 
 /// Extract reads matching a specific taxid from a bam
-fn extract_reads(path_kout: &PathBuf, taxid: u64, path_bam: &PathBuf) {
+fn extract_reads(path_kout: &PathBuf, taxid: u64, path_bam: &PathBuf) -> Result<(), anyhow::Error> {
     // Check if the .kout file exists
     if !path_kout.exists() {
         panic!(
@@ -292,8 +300,10 @@ fn extract_reads(path_kout: &PathBuf, taxid: u64, path_bam: &PathBuf) {
 
     for result in rdr.deserialize() {
         let record: KrakenStdRecords =
-            result.expect("Failed to parse record in kraken std output file");
+            result.context("Failed to parse record in kraken std output file")?;
 
         if record.taxid == taxid {}
     }
+
+    Ok(())
 }
