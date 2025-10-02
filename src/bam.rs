@@ -43,6 +43,7 @@ pub fn bam2microbes(
     std::fs::create_dir_all(outdir).context("Failed to create output directory")?;
 
     // Collect unmapped reads into FASTQAformat
+    log::info!("Extracting Unmapped Reads ...");
     bam2unmappedreads(bam_path, unmapped_fasta.as_str(), 50, 17.0)?;
     log::info!("Created fasta file of unmapped reads at {unmapped_fasta}");
 
@@ -125,10 +126,10 @@ pub fn bam2unmappedreads(
     let total_reads: u64 = idxstats.iter().map(|c| c.2 + c.3).sum();
     let total_mapped_reads: u64 = idxstats.iter().map(|c| c.2).sum();
     let total_unmapped_reads: u64 = idxstats.iter().map(|c| c.3).sum();
-    log::info!("BAM-level summary (each multi-map is counted independently):");
-    log::info!("\ttotal records: [{total_reads}]");
-    log::info!("\ttotal mapped: [{total_mapped_reads}]");
-    log::info!("\ttotal unmapped: [{total_unmapped_reads}]");
+    // log::info!("BAM-level summary (each multi-map is counted independently):");
+    // log::info!("\ttotal records: [{total_reads}]");
+    // log::info!("\ttotal mapped: [{total_mapped_reads}]");
+    // log::info!("\ttotal unmapped: [{total_unmapped_reads}]");
 
     // Write Bam Summary Stats
     let outdir = Path::new(fasta_output_path)
@@ -143,7 +144,8 @@ pub fn bam2unmappedreads(
         .to_str()
         .unwrap();
 
-    let mut summary_writer = std::fs::File::create(format!("{outdir}/{stem}.bam_summary.txt"))
+    let path_bamsummary = format!("{outdir}/{stem}.bam_summary.txt");
+    let mut summary_writer = std::fs::File::create(&path_bamsummary)
         .context("failed to open connection to bam summary stats file")?;
     writeln!(summary_writer, "total records\t{total_reads}").context("Bam summary write failed")?;
     writeln!(summary_writer, "total mapped\t{total_mapped_reads}")
@@ -183,9 +185,9 @@ pub fn bam2unmappedreads(
             .context("Failed to write unmapped read to FASTA file")?;
         }
     }
-    log::info!("Unmapped Read Summary: ");
-    log::info!("\ttotal unmapped reads: [{unmapped_counter}]");
-    log::info!("\tgood quality sequences: [{unmapped_good_quality_sequences}]");
+    // log::info!("Unmapped Read Summary: ");
+    // log::info!("\ttotal unmapped reads: [{unmapped_counter}]");
+    // log::info!("\tgood quality sequences: [{unmapped_good_quality_sequences}]");
 
     // Iterate through all contigs matching known microbial contigs and write mapped reads
     for contig_name in observed_microbial_contigs {
@@ -224,16 +226,18 @@ pub fn bam2unmappedreads(
                 nreads_good_alignment += 1
             }
         }
-        log::info!("Microbial Contig Stats: {contig_name}");
-        log::info!("\ttotal reads mapped: [{nreads_mapped}]");
-        log::info!("\tgood quality alignments mapped: [{nreads_good_alignment}]");
-        log::info!("\tgood quality sequences mapped: [{nreads_good_sequence}]");
+        // log::info!("Microbial Contig Stats: {contig_name}");
+        // log::info!("\ttotal reads mapped: [{nreads_mapped}]");
+        // log::info!("\tgood quality alignments mapped: [{nreads_good_alignment}]");
+        // log::info!("\tgood quality sequences mapped: [{nreads_good_sequence}]");
         writeln!(
             summary_writer,
             "Contig [{contig_name}] good quality alignments\t{nreads_good_alignment}"
         )
         .context("Failed to write counts of good quality alignments to bam_summary")?;
     }
+
+    log::info!("Umapped read counts summarised in {path_bamsummary}");
 
     Ok(())
 }
@@ -258,7 +262,7 @@ fn get_as_tag(record: &bam::Record) -> Option<i32> {
         Err(Error::BamAuxTagNotFound) => None, // AS tag not found
         Err(e) => {
             // Handle other potential errors
-            log::info!("Error retrieving AS tag: {e}");
+            log::warn!("Error retrieving AS tag: {e}");
             None
         }
     }

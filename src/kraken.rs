@@ -103,8 +103,6 @@ pub fn run_kraken(
         shellexpand::full(config.krakendb.to_str().context("failed to_str()")?)
             .context("Failed expansion of DB filepath")?;
 
-    log::info!("\nRunning Kraken:");
-
     // Build KrakenCommand
     let mut binding = std::process::Command::new(kraken_command);
     let cmd_kraken = binding
@@ -120,7 +118,7 @@ pub fn run_kraken(
     if config.report_zero_counts {
         cmd_kraken.args(["--report-zero-counts"]);
     }
-    log::info!("\nRunning Kraken: {cmd_kraken:?}");
+    log::info!("Running Kraken: {cmd_kraken:?}");
 
     // Run Kraken
     let output = cmd_kraken

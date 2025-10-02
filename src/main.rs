@@ -1,6 +1,5 @@
 use clap::{Parser, Subcommand};
 use env_logger::Env;
-use log::LevelFilter;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 
