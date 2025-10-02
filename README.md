@@ -100,7 +100,10 @@ Some microbes, e.g. EBV, can be subtyped if coverage is sufficient.
 
 ### Testing Data
 
-micrite comes packaged with a mini test kraken database ([krakendb](testfiles/krakendb)) comprised of human chromosome 2 from the T2T assembly + 3 viral genomes (Human gammaherpesvirus 8, Human gammaherpesvirus 4 (EBV), and Human papillomavirus)
+micrite comes packaged with a mini test kraken database ([krakendb](testfiles/krakendb)) comprised of human chromosome 2 from the T2T assembly + 3 viral genomes (Human gammaherpesvirus 8, Human gammaherpesvirus 4 (EBV), and Human papillomavirus).
+
+We also include a mini test [deacon host-depletion database](testfiles/deacon/chm13v2.chr2.deacon.k57w131.idx) comprised of human chromosome 2 form the T2T assembly. 
+
 
 ## Other Tools
 
@@ -121,5 +124,7 @@ Great for detecting many viruses. Very modular, and less opinionated than micrit
 A collection of quick commands to test micrite functions are working appropriately
 
 ```{r}
-cargo run -- --outdir outdir screen --bam testfiles/humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.bam  --db testfiles/database/krakendb/
+cargo run -- --outdir outdir screen --db-host testfiles/deacon/chm13v2.chr2.deac
+on.k57w131.idx --db-kraken testfiles/database/krakendb/ --report-zero-counts --bam t
+estfiles/humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.bam
 ```
