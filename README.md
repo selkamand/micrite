@@ -15,9 +15,15 @@ mitrite provides a single interface for DNA and total-RNA based analyses, and pr
 
 ## Installation
 
-The easiest way to get started with micrite pipelines is just run the nextflow pipeline.
+The easiest way to get started with micrite pipelines is just run the [nextflow pipeline](https://github.com/selkamand/nf-micrite).
 
 To install locally (not using nextflow) just download the latest release for your OS and add to your path.
+
+To install the dev version 
+
+```
+cargo install --git https://github.com/selkamand/micrite
+```
 
 ## Quick Start
 
