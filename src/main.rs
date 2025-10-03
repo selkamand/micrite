@@ -23,13 +23,17 @@ enum Commands {
         #[arg(short, long, default_value_t = 0.5)]
         confidence: f32,
 
-        /// Output std file
+        /// Do not output Kraken standard tsv output file
         #[arg(long, default_value_t = false)]
         cleanup_std_file: bool,
 
         /// Delete unmapped reads extracted from bam file after use
         #[arg(long, default_value_t = false)]
         cleanup_unmapped: bool,
+
+        /// Delete host-depleted reads extracted from bam file after use
+        #[arg(long, default_value_t = false)]
+        cleanup_host_depleted: bool,
 
         /// Include zero counts in kraken report
         #[arg(long, default_value_t = false)]
@@ -115,6 +119,7 @@ fn run() -> Result<(), anyhow::Error> {
             min_prop_unmapped_reads,
             min_number_unmapped_reads,
             oncogenic_only,
+            cleanup_host_depleted,
         } => {
             let kraken_config = micrite::kraken::KrakenConfig {
                 krakendb: db_kraken.clone(),
@@ -134,6 +139,7 @@ fn run() -> Result<(), anyhow::Error> {
                 db: db_host.clone(),
                 relative_threshold: *relative_threshold,
                 absolute_threshold: *absolute_threshold,
+                cleanup_host_depleted: *cleanup_host_depleted,
             };
 
             // Identify Microbes from BAM

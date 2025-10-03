@@ -70,6 +70,13 @@ pub fn bam2microbes(
         std::fs::remove_file(unmapped_fasta).context("Failed to delete unmapped reads")?;
     }
 
+    // Delete host-depleted-fastq fastqs
+    if config_deacon.cleanup_host_depleted {
+        log::info!("Removing host-depleted read file");
+        std::fs::remove_file(unmapped_host_depleted_fasta)
+            .context("Failed to delete host-depleted reads")?;
+    }
+
     // Extract microbe specific reads for likely hits
     // crate::kraken::extract_reads_from_microbial_hits
 

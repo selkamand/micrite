@@ -11,6 +11,7 @@ pub struct DeaconConfig {
     /// `-a/--abs-threshold`: minimum absolute number of minimizer hits for a match.
     /// Typical default is `2`.
     pub absolute_threshold: u8,
+    pub cleanup_host_depleted: bool,
 }
 
 /// Run host read depletion via [`deacon`](https://github.com/bede/deacon) using its
