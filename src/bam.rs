@@ -174,6 +174,9 @@ pub fn bam2unmappedreads(
         .context("fasta file to output unmapped reads could not be created")?;
 
     // Iterate through Unmapped reads and Save to FASTA if they're good quality
+    log::info!(
+        "Iterating through unmapped reads; saving to FASTA file if they're good quality ..."
+    );
     let mut unmapped_good_quality_sequences: u64 = 0;
     let mut unmapped_counter: u64 = 0;
     for r in bam.records() {
