@@ -1,3 +1,4 @@
+use anyhow::bail;
 use clap::{Parser, Subcommand};
 use env_logger::Env;
 use std::fs::read_to_string;
@@ -87,8 +88,8 @@ enum Commands {
         taxid: u64,
 
         /// Include children taxids
-        #[arg(short, long, default_value_t = true)]
-        include_children: bool,
+        #[arg(short, long, default_value_t = false)]
+        exclude_children: bool,
 
         /// Identifier for output file prefix (e.g. sample name)
         #[arg(short, long, value_name = "prefix")]
@@ -182,7 +183,7 @@ fn run() -> Result<(), anyhow::Error> {
         Commands::Subtype => todo!("Subtyping is not yet implemented"),
         Commands::Sift {
             taxid,
-            include_children,
+            exclude_children,
             prefix,
             kout,
             fasta,
@@ -190,8 +191,16 @@ fn run() -> Result<(), anyhow::Error> {
             outdir,
         } => {
             log::info!(
-                "Extracting reads mapped to taxid {taxid} (include_children: {include_children}) from {}", fasta.display()
+                "Extracting reads mapped to taxid {taxid} (include_children: {}) from {}",
+                !exclude_children,
+                fasta.display()
             );
+
+            // Chek kreport is supplied
+            if kreport.is_none() & !exclude_children {
+                bail!("--kreport argument is required to extract reads that map to child-taxids of {taxid}. Either supply the --kreport argument or set --exclude-children flag to only extract reads that map directly to the taxid and not its children");
+            }
+
             // Call the existing extractor
             krakenutils::extract_reads(
                 kout.as_path(),
@@ -199,7 +208,7 @@ fn run() -> Result<(), anyhow::Error> {
                 fasta.as_path(),
                 outdir.as_path(),
                 prefix.clone(),
-                *include_children,
+                !*exclude_children,
                 kreport.as_deref(), // Option<&Path>
             );
         }
