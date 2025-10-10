@@ -95,16 +95,16 @@ enum Commands {
         prefix: String,
 
         /// Path to the Kraken standard output file (TSV format)
-        #[arg(long, value_name = "KOUT TSV")]
-        path_kout: PathBuf,
+        #[arg(short = 'k', long, value_name = "KOUT TSV")]
+        kout: PathBuf,
 
         /// Path to the input FASTA file containing sequences
-        #[arg(long, value_name = "FASTA")]
-        path_fasta: PathBuf,
+        #[arg(short, long, value_name = "FASTA")]
+        fasta: PathBuf,
 
         /// Path to Kraken2 report file (required if `include_children` is true)
-        #[arg(long, value_name = "KREPORT")]
-        path_kreport: Option<PathBuf>,
+        #[arg(short = 'r', long, value_name = "KREPORT")]
+        kreport: Option<PathBuf>,
     },
 }
 
@@ -184,23 +184,23 @@ fn run() -> Result<(), anyhow::Error> {
             taxid,
             include_children,
             prefix,
-            path_kout,
-            path_fasta,
-            path_kreport,
+            kout,
+            fasta,
+            kreport,
             outdir,
         } => {
             log::info!(
-                "Extracting reads mapped to taxid {taxid} (include_children: {include_children}) from {}", path_fasta.display()
+                "Extracting reads mapped to taxid {taxid} (include_children: {include_children}) from {}", fasta.display()
             );
             // Call the existing extractor
             krakenutils::extract_reads(
-                path_kout.as_path(),
+                kout.as_path(),
                 *taxid,
-                path_fasta.as_path(),
+                fasta.as_path(),
                 outdir.as_path(),
                 prefix.clone(),
                 *include_children,
-                path_kreport.as_deref(), // Option<&Path>
+                kreport.as_deref(), // Option<&Path>
             );
         }
     }

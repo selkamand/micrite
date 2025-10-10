@@ -149,8 +149,8 @@ Must have run kraken screen first
 cargo run -- sift \
 --taxid 10376 \
 --prefix ebv_reads \
---path-kout outdir/humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.unmapped.hostdepleted.kout.tsv \
---path-fasta outdir/humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.unmapped.hostdepleted.fasta \
---path-kreport outdir/humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.unmapped.hostdepleted.kreport \
+--kout outdir/humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.unmapped.hostdepleted.kout.tsv \
+--fasta outdir/humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.unmapped.hostdepleted.fasta \
+--kreport outdir/humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.unmapped.hostdepleted.kreport \
 --outdir outdir/
 ```
