@@ -129,7 +129,6 @@ pub fn bam2unmappedreads(
 
     // Grab BAM Summary Stats
     let idxstats = bam.index_stats().context("Failed to get index stats")?;
-
     let total_reads: u64 = idxstats.iter().map(|c| c.2 + c.3).sum();
     let total_mapped_reads: u64 = idxstats.iter().map(|c| c.2).sum();
     let total_unmapped_reads: u64 = idxstats.iter().map(|c| c.3).sum();
@@ -182,15 +181,20 @@ pub fn bam2unmappedreads(
     for r in bam.records() {
         let record = r.unwrap_or_else(|err| panic!("Failed to read bam record: {err:?}"));
         let bam_record = parse_record(&record)?;
+
         unmapped_counter += 1;
         // Write to the FASTA file in the correct format
         // TODO: For now is_good_quality_sequence returns true for all. Add in this functionality.
         if is_good_quality_sequence(&bam_record, 50, 17.0, 2) {
+            let r1_or_r2 = match record.is_last_in_template() {
+                true => "R2",
+                false => "R1",
+            };
             unmapped_good_quality_sequences += 1;
             writeln!(
                 fasta_writer,
-                ">{}\n{}",
-                bam_record.qname, bam_record.sequence
+                ">{}{r1_or_r2}\n{}",
+                bam_record.qname, bam_record.sequence,
             )
             .context("Failed to write unmapped read to FASTA file")?;
         }

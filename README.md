@@ -136,9 +136,7 @@ A collection of quick commands to test micrite functions are working appropriate
 **1. Run kraken screen**
 
 ```{r}
-cargo run -- --outdir outdir screen --db-host testfiles/deacon/chm13v2.chr2.deac
-on.k57w131.idx --db-kraken testfiles/database/krakendb/ --report-zero-counts --bam t
-estfiles/humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.bam
+cargo run -- screen --outdir outdir --db-host testfiles/deacon/chm13v2.chr2.deacon.k57w131.idx --db-kraken testfiles/database/krakendb/ --report-zero-counts --bam testfiles/humanGRCh38_9000_ebv_1000_hpv16_1000_hpylori_1000.grch38_noalt.bam
 ```
 
 **1. Extract reads from a particular species**
