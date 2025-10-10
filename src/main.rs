@@ -83,7 +83,7 @@ enum Commands {
         #[arg(short, long, value_name = "OUTDIR")]
         outdir: PathBuf,
 
-        /// NCBI taxonomic ID to filter for
+        /// NCBI taxonomic ID to filter for. Set to zero to extract all unclassified reads.
         #[arg(short, long)]
         taxid: u64,
 

@@ -612,7 +612,7 @@ dependencies = [
 [[package]]
 name = "krakenutils"
 version = "0.1.0"
-source = "git+https://github.com/selkamand/krakenutils#75161c1517c3e5e0a1ffc96b38a5cb72dc7b0b96"
+source = "git+https://github.com/selkamand/krakenutils#adfbac30529ede69584c6aa5b0fdce41ed3938ad"
 dependencies = [
  "csv",
  "ext-sort",
