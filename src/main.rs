@@ -7,6 +7,10 @@ use std::path::PathBuf;
 enum Commands {
     /// Screen bam for microbial presense
     Screen {
+        /// Output Directory
+        #[arg(short, long, value_name = "OUTDIR")]
+        outdir: PathBuf,
+
         /// File with paths to bam files (newline separated)
         #[arg(short, long, value_name = "BAM File")]
         bam: PathBuf,
@@ -71,6 +75,37 @@ enum Commands {
 
     /// Subtype a genome
     Subtype,
+
+    /// Sift reads (subset) mapping to a specific taxid (optionally including children)
+    Sift {
+        /// Output Directory
+        #[arg(short, long, value_name = "OUTDIR")]
+        outdir: PathBuf,
+
+        /// NCBI taxonomic ID to filter for
+        #[arg(short, long)]
+        taxid: u64,
+
+        /// Include children taxids
+        #[arg(short, long, default_value_t = true)]
+        include_children: bool,
+
+        /// Identifier for output file prefix (e.g. sample name)
+        #[arg(short, long, value_name = "prefix")]
+        prefix: String,
+
+        /// Path to the Kraken standard output file (TSV format)
+        #[arg(long, value_name = "KOUT TSV")]
+        path_kout: PathBuf,
+
+        /// Path to the input FASTA file containing sequences
+        #[arg(long, value_name = "FASTA")]
+        path_fasta: PathBuf,
+
+        /// Path to Kraken2 report file (required if `include_children` is true)
+        #[arg(long, value_name = "KREPORT")]
+        path_kreport: Option<PathBuf>,
+    },
 }
 
 #[derive(Parser)]
@@ -78,10 +113,6 @@ enum Commands {
 struct Cli {
     #[command(subcommand)]
     command: Commands,
-
-    /// Output directory
-    #[arg(short, long, value_name = "OUTDIR")]
-    outdir: PathBuf,
 }
 
 fn setup_logger() {
@@ -120,6 +151,7 @@ fn run() -> Result<(), anyhow::Error> {
             min_number_unmapped_reads,
             oncogenic_only,
             cleanup_host_depleted,
+            outdir,
         } => {
             let kraken_config = micrite::kraken::KrakenConfig {
                 krakendb: db_kraken.clone(),
@@ -133,7 +165,7 @@ fn run() -> Result<(), anyhow::Error> {
                     min_number_reads: *min_number_unmapped_reads,
                     oncogenic_only: *oncogenic_only,
                 },
-                outdir: cli.outdir.display().to_string(),
+                outdir: outdir.display().to_string(),
             };
             let deacon_config = micrite::hostdepletion::DeaconConfig {
                 db: db_host.clone(),
@@ -148,6 +180,29 @@ fn run() -> Result<(), anyhow::Error> {
 
         Commands::Sleuth => panic!("Validation is not yet implemented"),
         Commands::Subtype => todo!("Subtyping is not yet implemented"),
+        Commands::Sift {
+            taxid,
+            include_children,
+            prefix,
+            path_kout,
+            path_fasta,
+            path_kreport,
+            outdir,
+        } => {
+            log::info!(
+                "Extracting reads mapped to taxid {taxid} (include_children: {include_children}) from {}", path_fasta.display()
+            );
+            // Call the existing extractor
+            krakenutils::extract_reads(
+                path_kout.as_path(),
+                *taxid,
+                path_fasta.as_path(),
+                outdir.as_path(),
+                prefix.clone(),
+                *include_children,
+                path_kreport.as_deref(), // Option<&Path>
+            );
+        }
     }
 
     log::info!("Micrite run completed");
